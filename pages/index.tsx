@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import axios from "axios";
 import Method from "axios/index.d";
 import { useEffect, useState } from "react";
+import { Container, Text, Button, Stack } from "@mantine/core";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,7 +46,19 @@ interface GetCompanyConfig {
   };
   withCredentials?: boolean;
 }
+interface GetHistoricalPriceConfig {
+  method?: Method;
+  url?: string;
+  params: {
+    token?: string;
+    range?: "1m" | "1d";
+  };
+}
 export default function Home() {
+  // display metadata
+  const [date, setDate] = useState(new Date());
+
+  // phrase one data
   const [stockName, setStockName] = useState("");
   const [payloadStockName, setPayloadStockName] = useState("");
   const [payloadStockExchange, setPayloadStockExchange] = useState("");
@@ -54,6 +67,9 @@ export default function Home() {
   const [payloadSector, setPayloadSector] = useState("");
   const [payloadMarketCap, setPayloadMarketCap] = useState("");
   const [payloadLongDesc, setPayloadLongDesc] = useState("");
+  // phrase two data
+
+  const [Price, setPrice] = useState([{}]);
 
   const GPTstockPayload = {
     CompanyOverview: {
@@ -84,6 +100,34 @@ export default function Home() {
       return "OK";
     } catch (e) {
       console.log(`getQuote Error with ${e}`);
+    }
+  }
+
+  async function getStockHistoricalPrices(
+    key: string | null,
+    stockName: string,
+    timeOption: string | null
+  ) {
+    try {
+      const today = new Date();
+      const day = today.getDate();
+      const getStockHistoricalPriceConfig: GetHistoricalPriceConfig = {
+        method: "get",
+        url: `https://cloud.iexapis.com/stable/stock/${stockName}/chart`,
+        params: {
+          token: "sk_649b65c2e2794bf6a6104dde4c9392b4",
+          range: "1m",
+        },
+      };
+
+      const getStockHistoricalPriceResponse = await axios(
+        getStockHistoricalPriceConfig
+      );
+      setPrice(getStockHistoricalPriceResponse.data);
+      console.log(`Today is : ${day}`);
+      console.log(getStockHistoricalPriceResponse);
+    } catch (e) {
+      console.log(`getStockHistoricalPrice error with ${e}`);
     }
   }
 
@@ -132,40 +176,48 @@ export default function Home() {
 
   return (
     <>
-      <form>
-        <div>
-          <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-            Stock Name
-          </label>
-          <input
-            type="text"
-            id="stockName"
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            onChange={(event) => {
-              setStockName(event.currentTarget.value);
+      <Container>
+        <form>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              Stock Name
+            </label>
+            <input
+              type="text"
+              id="stockName"
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              onChange={(event) => {
+                setStockName(event.currentTarget.value);
+              }}
+            ></input>
+          </div>
+          <Button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            onClick={(event) => {
+              event.preventDefault();
+              // getStockQuote(process.env.REACT_APP_IEXKEY!, stockName);
+              // getCompany(process.env.REACT_APP_IEXKEY!, stockName);
+              getStockHistoricalPrices(null, stockName, null);
             }}
-          ></input>
-        </div>
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          onClick={(event) => {
-            event.preventDefault();
-            // getStockQuote(process.env.REACT_APP_IEXKEY!, stockName);
-            getCompany(process.env.REACT_APP_IEXKEY!, stockName);
-          }}
-        >
-          Get Stock Quote
-        </button>
-        <button
-          onClick={(event) => {
-            event.preventDefault();
-            console.log(GPTstockPayload);
-          }}
-        >
-          Show payload
-        </button>
-      </form>
+          >
+            Get Stock Quote
+          </Button>
+          <Button
+            onClick={(event) => {
+              event.preventDefault();
+              console.log(GPTstockPayload);
+            }}
+          >
+            Show payload
+          </Button>
+          <Stack>
+            <Text> Date is: {date.getDate()}</Text>
+            <Text> Month is: {date.getMonth() + 1} </Text>
+            <Text> Price data set length is: {Price.length}</Text>
+          </Stack>
+        </form>
+      </Container>
     </>
   );
 }
